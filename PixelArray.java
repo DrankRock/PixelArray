@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadLocalRandom;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -18,7 +17,7 @@ import javax.swing.JPanel;
  * Heavily inspired from "PixelScreen" that I could find nowhere
  * Made to respond to my specific needs, but I can update if needed
  * @author Matvei Pavlov
- * @version 0.1
+ * @version 0.2 (7-Mar-22)
  * @since 02 Feb 2022
  *
  */
@@ -26,16 +25,19 @@ import javax.swing.JPanel;
 public class PixelArray extends JPanel{
 	//necessary for execution
 	private static final long serialVersionUID = -6342058807695314872L;
-	private int ARRAY_HEIGHT;
-	private int ARRAY_WIDTH;
-	private int SCREEN_WIDTH;
-	private int SCREEN_HEIGHT;
-	private int _nPixelsBetweenHeight;
-	private int _nPixelsBetweenWidth;
+	private double ARRAY_HEIGHT;
+	private double ARRAY_WIDTH;
+	private double SCREEN_WIDTH;
+	private double SCREEN_HEIGHT;
+	private int _nPixelsBetweenCol;
+	private int _nPixelsBetweenRow;
 	private JFrame _frame;
 	private JPanel _latest;
 	private Color[][] ARRAY;
 	private boolean _DEBUG = false;
+	private boolean isVisible = true;
+	private boolean IS_RUNNING = true;
+	private boolean useAsJPanel = false;
 	ExecutorService service = Executors.newFixedThreadPool(10);
 	
 	@SuppressWarnings("unused")
@@ -52,16 +54,21 @@ public class PixelArray extends JPanel{
 	public PixelArray(Color[][] array, String title) {
 		this(array.length,array[0].length, title, Color.white);
 		updateArray(array);
-		dPrint("Creating array of height : "+array.length+" and width "+array[0].length, _DEBUG);
+		dPrint("Creating array of height : "+array.length+" and width "+array[0].length);
 	}
 	
 	public PixelArray(int HEIGHT, int WIDTH, String title, Color color) {
+		this(HEIGHT, WIDTH, title, color, 500, 500, false);
+	}
+	
+	public PixelArray(int HEIGHT, int WIDTH, String title, Color color, int frame_width, int frame_height, boolean useAsJPanel) {
 		if(HEIGHT < 0 || WIDTH < 0 || HEIGHT == 0 && WIDTH == 0) {
 			throw new IllegalArgumentException("Incorrect array size");
 			
 		}
-		this._nPixelsBetweenHeight = 1;
-		this._nPixelsBetweenWidth = 1;
+		this.setPreferredSize(new Dimension(frame_width,frame_height));
+		this.useAsJPanel = useAsJPanel;
+		this.setPixelsBetween(0);
 		this.ARRAY_HEIGHT = HEIGHT;
 		this.ARRAY_WIDTH = WIDTH;
 		this.ARRAY = new Color[HEIGHT][WIDTH];
@@ -70,7 +77,8 @@ public class PixelArray extends JPanel{
 				ARRAY[i][j] = color;
 			}
 		}
-		this.frameStart(title);
+		if(!useAsJPanel)
+			this.frameStart(title, frame_width, frame_height);
 	}
 	
 	@Override
@@ -85,7 +93,21 @@ public class PixelArray extends JPanel{
 		_latest = this;
 		_frame = new JFrame();
 		_frame.setTitle(title);
-		_frame.getContentPane().setPreferredSize(new Dimension(500,500));
+		_frame.getContentPane().setPreferredSize(new Dimension(1000,1000));
+		_frame.setResizable(true);
+		_frame.setLocationRelativeTo(null);
+		_frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		_frame.setBackground(Color.lightGray);
+		_frame.add(_latest);
+		_frame.pack();
+		_frame.setVisible(true);
+	}
+	
+	public void frameStart(String title, int width, int height) {
+		_latest = this;
+		_frame = new JFrame();
+		_frame.setTitle(title);
+		_frame.getContentPane().setPreferredSize(new Dimension(width,height));
 		_frame.setResizable(true);
 		_frame.setLocationRelativeTo(null);
 		_frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -96,35 +118,41 @@ public class PixelArray extends JPanel{
 	}
 	
 	public void frameSetVisible(boolean bool) {
-		_frame.setVisible(bool)
+		if(this.useAsJPanel == true) {
+			throw new IllegalStateException("Can't set frame visibility in JPanel mode");
+		}
+		_frame.setVisible(bool);
+		this.isVisible = bool;
 	}
 	
 	private void paintArray(Graphics g) {
-		dPrint("private call to paintArray()", _DEBUG);
+		dPrint("private call to paintArray()");
 		Graphics2D g2d = (Graphics2D) g;
-		int sizeCol = (SCREEN_WIDTH/ARRAY_WIDTH)- _nPixelsBetweenWidth;
-    	int sizeRow = (SCREEN_HEIGHT/ARRAY_HEIGHT)- _nPixelsBetweenHeight;
-    	dPrint("size Column : "+sizeCol+", size Row : "+sizeRow, _DEBUG);
+		int sizeCol = (int) ((SCREEN_WIDTH/ARRAY_WIDTH)- _nPixelsBetweenCol);
+    	int sizeRow = (int) ((SCREEN_HEIGHT/ARRAY_HEIGHT)- _nPixelsBetweenRow);
+    	dPrint("size Column : "+sizeCol+", size Row : "+sizeRow);
     	for(int i=0; i<ARRAY_HEIGHT; i++) {
 			for(int j=0; j<ARRAY_WIDTH; j++) {
 		    	g.setColor(ARRAY[i][j]);
-		    	int varY = (i*_nPixelsBetweenWidth+(i)*sizeRow);
-		    	int varX = (j*_nPixelsBetweenHeight+(j)*sizeCol);
+		    	int varY = (i*_nPixelsBetweenRow+(i)*sizeRow);
+		    	int varX = (j*_nPixelsBetweenCol+(j)*sizeCol);
 		    	g2d.fillRect(varX,varY,sizeCol,sizeRow);
-		    	dPrint("fillrect starting at "+varX+","+varY+" to "+ARRAY[i][j], _DEBUG);
+		    	dPrint("fillrect starting at "+varX+","+varY+" to "+ARRAY[i][j]);
 		    	}
-			dPrint("",_DEBUG);
+			dPrint("");
 		}
 	}
 	
 	private void showAgain() {
-		dPrint("private call to showAgain()", _DEBUG);
-		_frame.remove(_latest);
-		_latest = this;
-		_frame.add(_latest);
-		_frame.revalidate();
-		_frame.repaint();
-		_frame.pack();
+		if(!this.useAsJPanel) {
+			dPrint("private call to showAgain()");
+			_frame.remove(_latest);
+			_latest = this;
+			_frame.add(_latest);
+			_frame.revalidate();
+			_frame.repaint();
+			_frame.pack();
+		}
 	}
 	
 	private static Map<String, Color> initMap() {
@@ -161,59 +189,82 @@ public class PixelArray extends JPanel{
 	public void updatePixel(int x, int y, Color color) {
 		ARRAY[y][x] = color;
 		this.showAgain();
-		dPrint("update pixel ["+x+","+y+"] to "+color, _DEBUG);
+		dPrint("update pixel ["+x+","+y+"] to "+color);
 	}
 	public void updatePixelDontShow(int x, int y, Color color) {
 		ARRAY[y][x] = color;
-		dPrint("update pixel ["+x+","+y+"] to "+color+" but not showing it.", _DEBUG);
+		dPrint("update pixel ["+x+","+y+"] to "+color+" but not showing it.");
 	}
 	public void updateArray(Color[][] newArray) {
-		dPrint("Update array ...", _DEBUG);
+		dPrint("Update array ...");
 		for(int i=0; i<ARRAY_HEIGHT; i++) {
 			for(int j=0; j<ARRAY_WIDTH; j++) {
-				dPrint(newArray[i][j], _DEBUG);
+				dPrint(newArray[i][j]);
 				ARRAY[i][j] = newArray[i][j];
 			}
-			dPrint("", _DEBUG);
+			dPrint("");
 		}
 		this.showAgain();
 	}
 	
 	public void updateArrayDontShow(Color[][] newArray) {
-		dPrint("Update array (not showing it)...", _DEBUG);
+		dPrint("Update array (not showing it)...");
 		for(int i=0; i<ARRAY_HEIGHT; i++) {
 			for(int j=0; j<ARRAY_WIDTH; j++) {
-				dPrint(newArray[i][j], _DEBUG);
+				dPrint(newArray[i][j]);
 				ARRAY[i][j] = newArray[i][j];
 			}
-			dPrint("", _DEBUG);
+			dPrint("");
 		}
 	}
 	
 	public JFrame getFrame() {
+		if(this.useAsJPanel == true) {
+			throw new IllegalStateException("Can't get frame in JPanel mode");
+		}
 		return _frame;
 	}
 	
 	public void setPixelsBetweenColumns(int pixels) {
-		this._nPixelsBetweenWidth = pixels;
+		this._nPixelsBetweenRow = pixels;
 	}
 	public void setPixelsBetweenRows(int pixels) {
-		this._nPixelsBetweenHeight = pixels;
+		this._nPixelsBetweenCol = pixels;
 	}
+	
+	/**
+	 * Set the number of pixels (literally pixels) between each rectangles of the array
+	 * @param pixels 
+	 */
 	public void setPixelsBetween(int pixels) {
 		setPixelsBetweenRows(pixels);
 		setPixelsBetweenColumns(pixels);
-		dPrint("Number of pixels between each rows and columns : "+pixels, _DEBUG);
+		dPrint("Number of pixels between each rows and columns : "+pixels);
 	}
+	/**
+	 * Update the dimensions of the frame
+	 * @param width
+	 * @param height
+	 * @hidden (Currently not working !)
+	 */
 	public void setDimension(int width, int height) {
 		_frame.getContentPane().setPreferredSize(new Dimension(width,height));
-		dPrint("Dimensions updated to "+width+"x"+height, _DEBUG);
+		SCREEN_WIDTH = getSize().width;
+		SCREEN_HEIGHT = getSize().height;
+		_frame.validate();
+        _frame.repaint();
+        _frame.pack();
+		dPrint("Dimensions updated to "+width+"x"+height);
 	}
 	
+	/**
+	 * Automatically update the frame ever ms milliseconds
+	 * @param ms long defining the number of milliseconds between each updates
+	 */
 	public void autoUpdate(long ms) {
 	    service.submit(new Runnable() {
 	        public void run() {
-	        	while(true) {
+	        	while(IS_RUNNING) {
 	        		showAgain();
 	        		try {
 						Thread.sleep(ms);
@@ -225,17 +276,37 @@ public class PixelArray extends JPanel{
 	    });
 	}
 	
+	/** 
+	 * @return the value of isVisible
+	 */
+	public boolean getVisible() {
+		return this.isVisible;
+	}
+	
+	/**
+	 * Close the frame, dispose of it, stops any autoUpdate.
+	 */
+	public void exit() {
+		dPrint("Exiting ...");
+		_frame.setVisible(false);
+		_frame.dispose();
+		IS_RUNNING = false;
+	}
+	
 	/**
 	 * Debug print, used to be activated or de-activated
 	 * @param o what is to be print
-	 * @param shouldIPrint true if debug mode is activated
 	 */
-	public void dPrint(Object o, boolean shouldIPrint) {
-		if(shouldIPrint) {
+	public void dPrint(Object o) {
+		if(_DEBUG) {
 			System.out.println(o.toString());
 		}
 	}
 	
+	/**
+	 * Set the debug mode
+	 * @param bool true to print everything, false to print nothing
+	 */
 	public void debugMode(boolean bool) {
 		this._DEBUG = bool;
 	}
