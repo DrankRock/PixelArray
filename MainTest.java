@@ -7,9 +7,9 @@ public class MainTest {
 	public static void main(String[] args) {
 		//PixelArray pa = new PixelArray(20,50, "test");
 		//simpleDesign();
-		int width = 47;
-		int height = 103;
-		PixelArray pa = new PixelArray(height, width, "Test", Color.white, 1000, 500, false);
+		int width = 100;
+		int height = 100;
+		PixelArray pa = new PixelArray(height, width, "Test", Color.white, 500, 500, false);
 		Color[][] ARRAY = new Color[height][width];
 		int count = 0;
 		for(int i=0; i<height; i++) {
@@ -21,8 +21,24 @@ public class MainTest {
 					ARRAY[i][j] = Color.white;
 			}
 		}
-		pa.debugMode(true);
+		//pa.debugMode(true);
 		pa.updateArray(ARRAY);
+		pa.updatePixel(99, 99, Color.red);
+		pa.updatePixel(1, 1, Color.gray);
+		int i = 1;
+		while(true) {
+			try {
+				Thread.sleep(500);
+				if(i==1)
+					pa.updatePixel(5, 5, Color.black);
+				if(i==-1)
+					pa.updatePixel(5, 5, Color.green);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			i=-i;
+		}
 
 	}
 	

@@ -1,6 +1,8 @@
 package main;
 
 import java.awt.Color;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -39,6 +41,8 @@ public class PixelArray extends JPanel{
 	private boolean IS_RUNNING = true;
 	private boolean useAsJPanel = false;
 	ExecutorService service = Executors.newFixedThreadPool(10);
+	int[][] sizeColumns;
+	int[][] sizeRows;
 	
 	@SuppressWarnings("unused")
 	public static final Map<String, Color> strToCol = initMap();
@@ -66,19 +70,27 @@ public class PixelArray extends JPanel{
 			throw new IllegalArgumentException("Incorrect array size");
 			
 		}
-		this.setPreferredSize(new Dimension(frame_width,frame_height));
-		this.useAsJPanel = useAsJPanel;
-		this.setPixelsBetween(0);
 		this.ARRAY_HEIGHT = HEIGHT;
 		this.ARRAY_WIDTH = WIDTH;
+		this.setPixelsBetween(0);
+		this.setPreferredSize(new Dimension(frame_width,frame_height));
+		this.useAsJPanel = useAsJPanel;
 		this.ARRAY = new Color[HEIGHT][WIDTH];
 		for(int i=0; i<HEIGHT;i++) {
 			for(int j=0;j<WIDTH;j++) {
 				ARRAY[i][j] = color;
 			}
 		}
+		sizeColumns = new int[(int) ARRAY_WIDTH][2];
+    	sizeRows = new int[(int) ARRAY_HEIGHT][2];
+		this.addComponentListener(new ResizeListener());
+		
 		if(!useAsJPanel)
 			this.frameStart(title, frame_width, frame_height);
+		SCREEN_WIDTH = getSize().width;
+		SCREEN_HEIGHT = getSize().height;
+		updateRowsAndColumnsSize();
+    	
 	}
 	
 	@Override
@@ -90,17 +102,7 @@ public class PixelArray extends JPanel{
     }
 	
 	public void frameStart(String title) {
-		_latest = this;
-		_frame = new JFrame();
-		_frame.setTitle(title);
-		_frame.getContentPane().setPreferredSize(new Dimension(1000,1000));
-		_frame.setResizable(true);
-		_frame.setLocationRelativeTo(null);
-		_frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		_frame.setBackground(Color.lightGray);
-		_frame.add(_latest);
-		_frame.pack();
-		_frame.setVisible(true);
+		frameStart(title, 1000, 1000);
 	}
 	
 	public void frameStart(String title, int width, int height) {
@@ -128,19 +130,51 @@ public class PixelArray extends JPanel{
 	private void paintArray(Graphics g) {
 		dPrint("private call to paintArray()");
 		Graphics2D g2d = (Graphics2D) g;
-		int sizeCol = (int) ((SCREEN_WIDTH/ARRAY_WIDTH)- _nPixelsBetweenCol);
-    	int sizeRow = (int) ((SCREEN_HEIGHT/ARRAY_HEIGHT)- _nPixelsBetweenRow);
-    	dPrint("size Column : "+sizeCol+", size Row : "+sizeRow);
     	for(int i=0; i<ARRAY_HEIGHT; i++) {
+    		int varY = sizeRows[i][1];
 			for(int j=0; j<ARRAY_WIDTH; j++) {
 		    	g.setColor(ARRAY[i][j]);
-		    	int varY = (i*_nPixelsBetweenRow+(i)*sizeRow);
-		    	int varX = (j*_nPixelsBetweenCol+(j)*sizeCol);
-		    	g2d.fillRect(varX,varY,sizeCol,sizeRow);
+		    	int varX = sizeColumns[j][1];
+		    	g2d.fillRect(varX,varY,sizeColumns[j][0]-this._nPixelsBetweenCol,sizeRows[i][0]-this._nPixelsBetweenRow);
 		    	dPrint("fillrect starting at "+varX+","+varY+" to "+ARRAY[i][j]);
 		    	}
 			dPrint("");
 		}
+	}
+	
+	/**
+	 * When the user resizes the screen, recalculates the size of each rows and columns to have no lost pixels.
+	 */
+	private void updateRowsAndColumnsSize() {
+		this.dPrint("Update Rows and Columns Sizes : ");
+		// Rounded to the smallest to be int, which puts some unused pixels at the end
+		int sizeCol = (int) ((SCREEN_WIDTH/ARRAY_WIDTH)- _nPixelsBetweenCol);
+    	int sizeRow = (int) ((SCREEN_HEIGHT/ARRAY_HEIGHT)- _nPixelsBetweenRow);
+    	// Calculate the number of unused pixels
+    	int lostColumnPixels = (int) (SCREEN_WIDTH-(sizeCol+_nPixelsBetweenRow)*ARRAY_WIDTH);
+    	int lostRowPixels = (int) (SCREEN_HEIGHT-(sizeRow+_nPixelsBetweenRow)*ARRAY_HEIGHT);
+    	dPrint("SizeCol : "+sizeCol+"; sizeRow : "+sizeRow+"; lostColumnPixels = "+lostColumnPixels+"; lostRowPixels = "+lostRowPixels+"\nscreen width = "+SCREEN_WIDTH+"; screen height ="+SCREEN_HEIGHT);
+    	// if we have n unused pixels, the first n squares will get a 1px bonus, on row or/and height
+    	for(int i=0; i<ARRAY_WIDTH;i++) {
+    		sizeColumns[i][0] = sizeCol+_nPixelsBetweenCol;
+    		if(lostColumnPixels > 0)
+    			sizeColumns[i][0]++;
+    		if(i>0)
+    			sizeColumns[i][1] = sizeColumns[i-1][1]+sizeColumns[i-1][0];
+    		else
+    			sizeColumns[i][1] = 0;
+    		lostColumnPixels--;
+    	}
+    	for(int i=0; i<ARRAY_HEIGHT;i++) {
+    		sizeRows[i][0] = sizeRow+_nPixelsBetweenRow;
+    		if(lostRowPixels > 0)
+    			sizeRows[i][0]++;
+    		if(i>0)
+    			sizeRows[i][1] = sizeRows[i-1][1]+sizeRows[i-1][0];
+    		else
+    			sizeRows[i][1] = 0;
+    		lostRowPixels--;
+    	}
 	}
 	
 	private void showAgain() {
@@ -151,7 +185,7 @@ public class PixelArray extends JPanel{
 			_frame.add(_latest);
 			_frame.revalidate();
 			_frame.repaint();
-			_frame.pack();
+			//_frame.pack(); //I commented that because it auto-resizes on every showAgain to previous size. 
 		}
 	}
 	
@@ -186,15 +220,32 @@ public class PixelArray extends JPanel{
         return Collections.unmodifiableMap(map);
     }
 	
+	/**
+	 * Update a single pixel to a given color
+	 * @param x the x coordinate of the pixel (starts at 0)
+	 * @param y the y coordinate of the pixel (starts at 0)
+	 * @param color the color (ex : Color.blue)
+	 */
 	public void updatePixel(int x, int y, Color color) {
 		ARRAY[y][x] = color;
 		this.showAgain();
 		dPrint("update pixel ["+x+","+y+"] to "+color);
 	}
+	/**
+	 * Update a single pixel to a given color but dont update the screen
+	 * @param x the x coordinate of the pixel (starts at 0)
+	 * @param y the y coordinate of the pixel (starts at 0)
+	 * @param color the color (ex : Color.blue)
+	 */
 	public void updatePixelDontShow(int x, int y, Color color) {
 		ARRAY[y][x] = color;
 		dPrint("update pixel ["+x+","+y+"] to "+color+" but not showing it.");
 	}
+	
+	/**
+	 * Update the full screen with a Color[][] Array
+	 * @param newArray the new Array.
+	 */
 	public void updateArray(Color[][] newArray) {
 		dPrint("Update array ...");
 		for(int i=0; i<ARRAY_HEIGHT; i++) {
@@ -207,6 +258,10 @@ public class PixelArray extends JPanel{
 		this.showAgain();
 	}
 	
+	/**
+	 * Update the full screen with a Color[][] Array but don't update the screen
+	 * @param newArray the new Array.
+	 */
 	public void updateArrayDontShow(Color[][] newArray) {
 		dPrint("Update array (not showing it)...");
 		for(int i=0; i<ARRAY_HEIGHT; i++) {
@@ -311,8 +366,10 @@ public class PixelArray extends JPanel{
 		this._DEBUG = bool;
 	}
 	
-	
-	
-	
+	class ResizeListener extends ComponentAdapter{
+		public void componentResized(ComponentEvent e) {
+			updateRowsAndColumnsSize();
+		}
+	}
 
 }
