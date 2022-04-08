@@ -1,4 +1,4 @@
-package main;
+package gameOfLife;
 
 import java.awt.Color;
 import java.awt.event.ComponentAdapter;
@@ -11,7 +11,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.Point;
 
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 /**
@@ -19,7 +23,7 @@ import javax.swing.JPanel;
  * Heavily inspired from "PixelScreen" that I could find nowhere
  * Made to respond to my specific needs, but I can update if needed
  * @author Matvei Pavlov
- * @version 0.2 (7-Mar-22)
+ * @version 0.3 (16-Mar-22)
  * @since 02 Feb 2022
  *
  */
@@ -35,6 +39,7 @@ public class PixelArray extends JPanel{
 	private int _nPixelsBetweenRow;
 	private JFrame _frame;
 	private JPanel _latest;
+	private static final int inFocused = JComponent.WHEN_IN_FOCUSED_WINDOW;
 	private Color[][] ARRAY;
 	private boolean _DEBUG = false;
 	private boolean isVisible = true;
@@ -90,6 +95,7 @@ public class PixelArray extends JPanel{
 		SCREEN_WIDTH = getSize().width;
 		SCREEN_HEIGHT = getSize().height;
 		updateRowsAndColumnsSize();
+		addMouseListener(new mouseEventListener());
     	
 	}
 	
@@ -130,7 +136,8 @@ public class PixelArray extends JPanel{
 	private void paintArray(Graphics g) {
 		dPrint("private call to paintArray()");
 		Graphics2D g2d = (Graphics2D) g;
-    	for(int i=0; i<ARRAY_HEIGHT; i++) {
+		/* TODO: make this multithreaded, with one thread doing even and one thread doing odds*/
+		for(int i=0; i<ARRAY_HEIGHT; i++) {
     		int varY = sizeRows[i][1];
 			for(int j=0; j<ARRAY_WIDTH; j++) {
 		    	g.setColor(ARRAY[i][j]);
@@ -177,7 +184,7 @@ public class PixelArray extends JPanel{
     	}
 	}
 	
-	private void showAgain() {
+	public void showAgain() {
 		if(!this.useAsJPanel) {
 			dPrint("private call to showAgain()");
 			_frame.remove(_latest);
@@ -231,6 +238,11 @@ public class PixelArray extends JPanel{
 		this.showAgain();
 		dPrint("update pixel ["+x+","+y+"] to "+color);
 	}
+	
+	public void updatePixel(Point point, Color color) {
+		this.updatePixel(point.x, point.y, color);
+	}
+	
 	/**
 	 * Update a single pixel to a given color but dont update the screen
 	 * @param x the x coordinate of the pixel (starts at 0)
@@ -313,7 +325,7 @@ public class PixelArray extends JPanel{
 	}
 	
 	/**
-	 * Automatically update the frame ever ms milliseconds
+	 * Automatically update the frame every ms milliseconds
 	 * @param ms long defining the number of milliseconds between each updates
 	 */
 	public void autoUpdate(long ms) {
@@ -336,6 +348,40 @@ public class PixelArray extends JPanel{
 	 */
 	public boolean getVisible() {
 		return this.isVisible;
+	}
+	public Point pixelCoordsToArrayCoords(Point point) {
+		return this.pixelCoordsToArrayCoords(point.x, point.y);
+	}
+	public Point pixelCoordsToArrayCoords(int x, int y) {
+		int lastX = 0;
+		int lastY = 0;
+		int currentX;
+		int currentY;
+		int finalX = -1;
+		int finalY = -1;
+		for(int i=1; i<ARRAY_WIDTH; i++) {
+			currentX = this.sizeColumns[i][1];
+			if(x>=lastX && x<=currentX) {
+				finalX = i-1;
+				break;
+			}
+			lastX = currentX;
+		}
+		if(finalX == -1) {
+			finalX = (int) (ARRAY_WIDTH-1);
+		}
+		for(int i=1; i<ARRAY_HEIGHT; i++) {
+			currentY = this.sizeRows[i][1];
+			if(y>=lastY && y<=currentY) {
+				finalY = i-1;
+				break;
+			}
+			lastY = currentY;
+		}
+		if(finalY == -1) {
+			finalY = (int) (ARRAY_HEIGHT-1);
+		}
+		return new Point(finalY, finalX); //tbh I don't understand why it's inverted, but meh whatever
 	}
 	
 	/**
@@ -369,6 +415,33 @@ public class PixelArray extends JPanel{
 	class ResizeListener extends ComponentAdapter{
 		public void componentResized(ComponentEvent e) {
 			updateRowsAndColumnsSize();
+		}
+	}
+	
+	/**
+	 * Example MouseEventListener class to execute action on mouse click.
+	 * Feel free to copy this, and do some actions. Use mouseClickToCoords(int x, int y) to get the
+	 * coordinates in the array of this point. 
+	 * do myPixelArray.add(myMouseEventListener) to link pixelArray and mouse clicks
+	 *
+	 */
+	public class mouseEventListener extends MouseAdapter{
+		@Override
+		public void mouseClicked(MouseEvent arg0) {
+		}
+		@Override
+		public void mouseEntered(MouseEvent arg0) {
+		}
+		@Override
+		public void mouseExited(MouseEvent arg0) {
+		}
+		@Override
+		public void mousePressed(MouseEvent e) {
+		}
+		@Override
+		public void mouseReleased(MouseEvent arg0) {
+			//System.out.println();
+			//updatePixel(pixelCoordsToArrayCoords(arg0.getX(), arg0.getY()), Color.blue);
 		}
 	}
 
