@@ -4,6 +4,8 @@
 ## Objective
 The main objective is to make 2D games very easily with pixelated visuals. It can be used for virtually anything if it can be represented using a pixelated view.
 
+---
+
 ## Usage 
 This project isn't currently available as a library. You can use it by adding the PixelArray.java to your project and directly creating and using a PixelArray object. 
 
@@ -35,10 +37,9 @@ while(true) {
 
 ## Example
 A complete Conway's Game of Life using PixelArray for the visual can be found in gameOfLife.java. It is fully working and commented.  
-Here is a Demo of it working.
+Here is a Demo of it working, showing a [Gosper glider gun](https://conwaylife.com/wiki/Gosper_glider_gun).
 
 ### Demo  
-
 
 https://user-images.githubusercontent.com/32172257/162944629-cdc8d1b9-f02a-4f31-ace0-899b164eafe1.mp4
 
