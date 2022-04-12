@@ -29,7 +29,9 @@ A complete Conway's Game of Life using PixelArray for the visual can be found in
 Here is a Demo of it working. The first part is sped because I really wanted to show off making a launcher. 
 
 ### Demo  
-\<insert nice demo\>
+
+
+https://user-images.githubusercontent.com/32172257/162944629-cdc8d1b9-f02a-4f31-ace0-899b164eafe1.mp4
 
 
 ## What next ?
