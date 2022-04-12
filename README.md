@@ -17,16 +17,25 @@ Color backgroundColor = Color.white;
 PixelArray myPixelArray = new PixelArray(width, height, title, backgroundColor);
 new PixelArray(size,size,"Game Of Life",Color.white);
 ```
-
 Immediately after this, a new window containing the 100 by 200 pixelArray will open. To update it you need a simple game loop such as :
+
 ### Looping
 ```java
-
+while(true) {
+    pa.updateArray(GOL.toColor());
+    GOL.nextArr();
+    try {
+        Thread.sleep(100);
+    } catch (InterruptedException e) {
+        continue;
+    }
+}
 ```
+*(from the example below)*
 
 ## Example
 A complete Conway's Game of Life using PixelArray for the visual can be found in gameOfLife.java. It is fully working and commented.  
-Here is a Demo of it working. The first part is sped because I really wanted to show off making a launcher. 
+Here is a Demo of it working.
 
 ### Demo  
 
